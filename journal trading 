@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>ژورنال معاملاتی</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #151f31;
+      --input: #0b1220;
+      --border: #263449;
+      --text: #e7edf7;
+      --muted: #93a4bd;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #3b82f6;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Tahoma, system-ui, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      margin: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--blue);
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      background: var(--green);
+      color: #052e16;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .secondary {
+      background: #263449;
+      color: var(--text);
+      margin-top: 10px;
+    }
+
+    .danger {
+      background: var(--red);
+      color: white;
+      margin-top: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .box {
+      background: var(--input);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .box span {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .box b {
+      font-size: 17px;
+    }
+
+    .green {
+      color: var(--green);
+    }
+
+    .red {
+      color: var(--red);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .trade {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .trade:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      padding: 10px;
+      border-radius: 12px;
+      background: #151f31;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>📊 ژورنال معاملاتی</h1>
+    <span class="muted" id="userLabel">مهمان</span>
+  </div>
+
+  <!-- تنظیم بالانس -->
+  <div class="card" id="balanceCard">
+    <h2>بالانس حساب خودت را وارد کن</h2>
+    <label>بالانس اولیه</label>
+    <input id="balanceInput" type="number" inputmode="decimal" placeholder="مثلاً 1000">
+    <button onclick="saveBalance()">ثبت و شروع</button>
+  </div>
+
+  <!-- داشبورد -->
+  <div id="app" class="hidden">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('journal', this)">📝 ثبت معامله</div>
+      <div class="tab" onclick="showTab('history', this)">📜 تاریخچه</div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div class="box">
+          <span>بالانس فعلی</span>
+          <b id="currentBalance">0</b>
+        </div>
+        <div class="box">
+          <span>سود / زیان</span>
+          <b id="totalPnl">0</b>
+        </div>
+        <div class="box">
+          <span>بازدهی</span>
+          <b id="returnPercent">0%</b>
+        </div>
+        <div class="box">
+          <span>وین‌ریت</span>
+          <b id="winRate">0%</b>
+        </div>
+      </div>
+      <p class="muted" style="margin:12px 0 0;">
+        بالانس اولیه: <span id="initialBalanceText">0</span>
+      </p>
+      <button class="secondary" onclick="changeBalance()">تغییر بالانس</button>
+    </div>
+
+    <!-- فرم ثبت معامله -->
+    <div id="journalTab">
+      <div class="card">
+        <h2>ثبت معامله جدید</h2>
+
+        <label>نماد</label>
+        <input id="symbol" placeholder="BTCUSDT، XAUUSD، EURUSD...">
+
+        <label>اپشن / استراتژی</label>
+        <select id="option">
+          <option>Spot Buy</option>
+          <option>Spot Sell</option>
+          <option>Futures Long</option>
+          <option>Futures Short</option>
+          <option>Scalping</option>
+          <option>Swing Trading</option>
+          <option>Breakout</option>
+          <option>Support/Resistance</option>
+          <option>Trend Following</option>
+          <option>News Trading</option>
+        </select>
+
+        <label>جهت معامله</label>
+        <select id="direction">
+          <option>خرید / Long</option>
+          <option>فروش / Short</option>
+        </select>
+
+        <label>قیمت ورود</label>
+        <input id="entry" type="number" inputmode="decimal" placeholder="0.00">
+
+        <label>قیمت خروج</label>
+        <input id="exitPrice" type="number" inputmode="decimal" placeholder="اگر باز است خالی بگذار">
+
+        <label>حجم / مبلغ ورودی</label>
+        <input id="size" type="number" inputmode="decimal" placeholder="0.00">
+
+        <label>حد ضرر</label>
+        <input id="stopLoss" type="number" inputmode="decimal" placeholder="اختیاری">
+
+        <label>حد سود</label>
+        <input id="takeProfit" type="number" inputmode="decimal" placeholder="اختیاری">
+
+        <label>نتیجه به دلار</label>
+        <input id="result" type="number" inputmode="decimal" placeholder="مثلاً 120 یا -80">
+
+        <label>یادداشت</label>
+        <textarea id="notes" rows="3" placeholder="دلیل ورود، احساسات و اشتباهات..."></textarea>
+
+        <button onclick="addTrade()">ثبت معامله</button>
+      </div>
+    </div>
+
+    <!-- تاریخچه -->
+    <div id="historyTab" class="hidden">
+      <div class="card">
+        <h2>تاریخچه معاملات</h2>
+        <div id="tradeList"></div>
+      </div>
+      <button class="danger" onclick="resetData()">پاک کردن همه داده‌ها</button>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#0b1220');
+      tg.setBackgroundColor('#0b1220');
+    }
+
+    const STORAGE_KEY = 'trading_journal_mini_app';
+
+    const balanceCard = document.getElementById('balanceCard');
+    const app = document.getElementById('app');
+
+    function loadData() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    }
+
+    function saveData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('en-US', {
+        maximumFractionDigits: 2
+      });
+    }
+
+    function getUserId() {
+      const user = tg?.initDataUnsafe?.user;
+      return user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'مهمان';
+    }
+
+    function showTab(tabName, element) {
+      document.getElementById('journalTab').classList.toggle('hidden', tabName !== 'journal');
+      document.getElementById('historyTab').classList.toggle('hidden', tabName !== 'history');
+
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      element.classList.add('active');
+
+      if (tabName === 'history') renderTrades();
+    }
+
+    function saveBalance() {
+      const balance = Number(document.getElementById('balanceInput').value);
+
+      if (!balance || balance <= 0) {
+        alert('لطفاً یک بالانس معتبر وارد کن.');
+        return;
+      }
+
+      const data = loadData();
+      data.initialBalance = balance;
+      data.trades = data.trades || [];
+      saveData(data);
+
+      render();
+    }
+
+    function changeBalance() {
+      const data = loadData();
+      const newBalance = prompt('بالانس جدید را وارد کن:', data.initialBalance || '');
+
+      if (newBalance === null) return;
+
+      const value = Number(newBalance);
+
+      if (!value || value <= 0) {
+        alert('بالانس واردشده معتبر نیست.');
+        return;
+      }
+
+      data.initialBalance = value;
+      saveData(data);
+      render();
+    }
+
+    function addTrade() {
+      const data = loadData();
+
+      if (!data.initialBalance) {
+        alert('اول بالانس خودت را وارد کن.');
+        return;
+      }
+
+      const trade = {
+        id: Date.now(),
+        symbol: document.getElementById('symbol').value.trim(),
+        option: document.getElementById('option').value,
+        direction: document.getElementById('direction').value,
+        entry: Number(document.getElementById('entry').value || 0),
+        exitPrice: Number(document.getElementById('exitPrice').value || 0),
+        size: Number(document.getElementById('size').value || 0),
+        stopLoss: Number(document.getElementById('stopLoss').value || 0),
+        takeProfit: Number(document.getElementById('takeProfit').value || 0),
+        result: Number(document.getElementById('result').value || 0),
+        notes: document.getElementById('notes').value.trim(),
+        date: new Date().toLocaleString('fa-IR')
+      };
+
+      if (!trade.symbol || !trade.entry || !trade.size) {
+        alert('نماد، قیمت ورود و حجم را کامل کن.');
+        return;
+      }
+
+      data.trades = data.trades || [];
+      data.trades.push(trade);
+      saveData(data);
+
+      document.getElementById('symbol').value = '';
+      document.getElementById('entry').value = '';
+      document.getElementById('exitPrice').value = '';
+      document.getElementById('size').value = '';
+      document.getElementById('stopLoss').value = '';
+      document.getElementById('takeProfit').value = '';
+      document.getElementById('result').value = '';
+      document.getElementById('notes').value = '';
+
+      render();
+      renderTrades();
+
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('medium');
+      }
+
+      if (tg?.showAlert) {
+        tg.showAlert('معامله با موفقیت ثبت شد ✅');
+      } else {
+        alert('معامله با موفقیت ثبت شد ✅');
+      }
+    }
+
+    function deleteTrade(id) {
+      const data = loadData();
+      data.trades = (data.trades || []).filter(trade => trade.id !== id);
+      saveData(data);
+      render();
+      renderTrades();
+    }
+
+    function renderTrades() {
+      const data = loadData();
+      const trades = data.trades || [];
+      const list = document.getElementById('tradeList');
+
+      list.innerHTML = '';
+
+      if (!trades.length) {
+        list.innerHTML = '<p class="muted">هنوز معامله‌ای ثبت نشده است.</p>';
+        return;
+      }
+
+      [...trades].reverse().forEach(trade => {
+        const item = document.createElement('div');
+        item.className = 'trade';
+
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; gap:8px;">
+            <b>${trade.symbol}</b>
+            <b class="${trade.result >= 0 ? 'green' : 'red'}">
+              ${formatNumber(trade.result)}$
+            </b>
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            ${trade.option} | ${trade.direction}
+          </div>
+          <div class="muted">
+            ورود: ${formatNumber(trade.entry)} |
+            خروج: ${trade.exitPrice ? formatNumber(trade.exitPrice) : 'باز'}
+          </div>
+          ${trade.notes ? `<div class="muted" style="margin-top:6px;">${trade.notes}</div>` : ''}
+          <button class="secondary" onclick="deleteTrade(${trade.id})">حذف</button>
+        `;
+
+        list.appendChild(item);
+      });
+    }
+
+    function render() {
+      const data = loadData();
+      document.getElementById('userLabel').textContent = getUserId();
+
+      if (!data.initialBalance) {
+        balanceCard.classList.remove('hidden');
+        app.classList.add('hidden');
+        return;
+      }
+
+      balanceCard.classList.add('hidden');
+      app.classList.remove('hidden');
+
+      const trades = data.trades || [];
+      const totalResult = trades.reduce((sum, trade) => sum + Number(trade.result || 0), 0);
+      const currentBalance = Number(data.initialBalance) + totalResult;
+      const pnl = currentBalance - Number(data.initialBalance);
+      const returnPercent = Number(data.initialBalance)
+        ? (pnl / Number(data.initialBalance)) * 100
+        : 0;
+      const wins = trades.filter(trade => Number(trade.result) > 0).length;
+      const winRate = trades.length ? (wins / trades.length) * 100 : 0;
+
+      document.getElementById('currentBalance').textContent = formatNumber(currentBalance);
+      document.getElementById('totalPnl').textContent = formatNumber(pnl);
+      document.getElementById('totalPnl').className = pnl >= 0 ? 'green' : 'red';
+      document.getElementById('returnPercent').textContent = returnPercent.toFixed(2) + '%';
+      document.getElementById('returnPercent').className = returnPercent >= 0 ? 'green' : 'red';
+      document.getElementById('winRate').textContent = winRate.toFixed(1) + '%';
+      document.getElementById('initialBalanceText').textContent = formatNumber(data.initialBalance);
+    }
+
+    function resetData() {
+      if (!confirm('همه معاملات و بالانس پاک شوند؟')) return;
+
+      localStorage.removeItem(STORAGE_KEY);
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
